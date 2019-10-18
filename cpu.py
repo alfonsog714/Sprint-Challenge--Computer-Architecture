@@ -19,8 +19,14 @@ class CPU:
             'HALT': 0b00000001,
             'LDI': 0b10000010,
             'PRN': 0b01000111,
-            'MUL': 0b10100010
+            'MUL': 0b10100010,
+            'JMP': 0b01010100,
+            'CMP': 0b10100111
         }
+
+        # Specific registers
+        # last 3 bits are LGE
+        self.flags = 0b00000000
 
     def load(self):
         """Load a program into memory."""
@@ -70,7 +76,19 @@ class CPU:
         elif op == 'MUL':
             self.registers[reg_a] *= self.registers[reg_b]
 
-        # elif op == "SUB": etc
+        elif op == "SUB":
+            self.registers[reg_a] -= self.registers[reg_b]
+
+        elif op == "CMP":
+            if self.registers[reg_a] == self.registers[reg_b]:
+                self.flags = 0b00000001
+
+            elif self.registers[reg_a] > self.registers[reg_b]:
+                self.flags = 0b00000010
+
+            elif self.registers[reg_a] < self.registers[reg_b]:
+                self.flags = 0b00000100
+
         else:
             raise Exception("Unsupported ALU operation")
 
@@ -120,6 +138,12 @@ class CPU:
                 reg_a = self.ram[self.pc + 1]
                 reg_b = self.ram[self.pc + 2]
                 self.alu('MUL', reg_a, reg_b)
+                self.pc += 3
+
+            elif command == self.instructions['CMP']:
+                reg_a = self.ram[self.pc + 1]
+                reg_b = self.ram[self.pc + 2]
+                self.alu('CMP', reg_a, reg_b)
                 self.pc += 3
 
             else:
