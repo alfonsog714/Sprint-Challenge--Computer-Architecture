@@ -21,12 +21,15 @@ class CPU:
             'PRN': 0b01000111,
             'MUL': 0b10100010,
             'JMP': 0b01010100,
-            'CMP': 0b10100111
+            'CMP': 0b10100111,
+            'JEQ': 0b01010101,
+            'JNE': 0b01010110
         }
 
         # Specific registers
-        # last 3 bits are LGE
-        self.flags = 0b00000000
+        # 0 1 2 3 4 5 6 7
+        #            < > =
+        self.flag = [0] * 8
 
     def load(self):
         """Load a program into memory."""
@@ -80,14 +83,21 @@ class CPU:
             self.registers[reg_a] -= self.registers[reg_b]
 
         elif op == "CMP":
-            if self.registers[reg_a] == self.registers[reg_b]:
-                self.flags = 0b00000001
+            self.flag[5] = 0
+            self.flag[6] = 0
+            self.flag[7] = 0
 
-            elif self.registers[reg_a] > self.registers[reg_b]:
-                self.flags = 0b00000010
+            if reg_a == reg_b:
+                self.flag[7] = 1
 
-            elif self.registers[reg_a] < self.registers[reg_b]:
-                self.flags = 0b00000100
+            elif reg_a > reg_b:
+                self.flag[6] = 1
+
+            # elif reg_a < reg_b:
+            #     self.flag[5] = 1
+
+            else:
+                self.flag[5] = 1
 
         else:
             raise Exception("Unsupported ALU operation")
@@ -108,7 +118,7 @@ class CPU:
         ), end='')
 
         for i in range(8):
-            print(" %02X" % self.reg[i], end='')
+            print(" %02X" % self.registers[i], end='')
 
         print()
 
@@ -124,28 +134,53 @@ class CPU:
                 self.pc += 1
 
             elif command == self.instructions['LDI']:
+                # self.trace()
                 reg = self.ram[self.pc + 1]
                 value = self.ram[self.pc + 2]
                 self.registers[reg] = value
                 self.pc += 3
 
             elif command == self.instructions['PRN']:
+                # self.trace()
                 reg = self.ram[self.pc + 1]
                 print(self.registers[reg])
                 self.pc += 2
 
             elif command == self.instructions['MUL']:
+                # self.trace()
                 reg_a = self.ram[self.pc + 1]
                 reg_b = self.ram[self.pc + 2]
                 self.alu('MUL', reg_a, reg_b)
                 self.pc += 3
 
             elif command == self.instructions['CMP']:
-                reg_a = self.ram[self.pc + 1]
-                reg_b = self.ram[self.pc + 2]
+                # self.trace()
+                reg_a = self.registers[self.ram[self.pc + 1]]
+                reg_b = self.registers[self.ram[self.pc + 2]]
                 self.alu('CMP', reg_a, reg_b)
                 self.pc += 3
 
+            elif command == self.instructions['JMP']:
+                # self.trace()
+                # print(reg)
+                self.pc = self.registers[self.ram[self.pc + 1]]
+
+            elif command == self.instructions['JEQ']:
+
+                if self.flag[7] == 1:
+                    self.pc = self.registers[self.ram[self.pc + 1]]
+                else:
+                    # print(f"{reg} - Flag is not equal")
+                    self.pc += 2
+
+            elif command == self.instructions['JNE']:
+
+                if self.flag[7] == 0:
+                    self.pc = self.registers[self.ram[self.pc + 1]]
+                else:
+                    # print(f"{reg} - Flag is not equal")
+                    self.pc += 2
             else:
-                print(f"Unkown instruction: {command}")
+                # self.trace()
+                print(f"Unkown instruction: {bin(command)} - {command}")
                 sys.exit(1)
